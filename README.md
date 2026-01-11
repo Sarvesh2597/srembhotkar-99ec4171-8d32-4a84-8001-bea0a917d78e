@@ -1,96 +1,305 @@
-# TaskManagement
+# Secure Task Management System
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+A full-stack task management application with role-based access control (RBAC) built using NX monorepo, NestJS, Angular, and TailwindCSS.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+## Setup Instructions
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/intro#learn-nx?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+### Prerequisites
 
-## Run tasks
+- Node.js 20+
+- npm
 
-To run tasks with Nx use:
+### Installation
 
-```sh
-npx nx <target> <project-name>
+```bash
+# Clone the repository
+git clone <repository-url>
+cd srembhotkar-99ec4171-8d32-4a84-8001-bea0a917d78e
+
+# Install dependencies
+npm install
 ```
 
-For example:
+### Environment Configuration
 
-```sh
-npx nx build myproject
+Create a `.env` file in `apps/api/` (optional - defaults are provided):
+
+```env
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+NODE_ENV=development
+PORT=3000
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+### Running the Application
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+**Start the Backend:**
+```bash
+npx nx serve api
+```
+The API runs at `http://localhost:3000/api`. The database is automatically seeded with demo data on first run.
 
-## Add new projects
+**Start the Frontend:**
+```bash
+npx nx serve dashboard
+```
+The dashboard runs at `http://localhost:4200`
 
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
+### Demo Credentials
 
-To install a new plugin you can use the `nx add` command. Here's an example of adding the React plugin:
-```sh
-npx nx add @nx/react
+| Email | Password | Role | Organization |
+|-------|----------|------|--------------|
+| sarah.mitchell@acme.com | password123 | Owner | Acme Corporation |
+| james.wilson@acme.com | password123 | Admin | Technology Department |
+| emily.chen@acme.com | password123 | Viewer | Technology Department |
+| michael.brown@acme.com | password123 | Admin | Sales Department |
+
+### Running Tests
+
+```bash
+# Backend tests
+npx nx test api
+
+# Auth library tests
+npx nx test auth
 ```
 
-Use the plugin's generator to create new projects. For example, to create a new React app or library:
+## Architecture Overview
 
-```sh
-# Generate an app
-npx nx g @nx/react:app demo
+### NX Monorepo Structure
 
-# Generate a library
-npx nx g @nx/react:lib some-lib
+```
+apps/
+  api/              # NestJS backend
+  dashboard/        # Angular frontend
+
+libs/
+  data/             # Shared TypeScript interfaces & DTOs
+  auth/             # Reusable RBAC logic and decorators
 ```
 
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
+### Shared Libraries
 
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+**libs/data** - Contains all shared interfaces, enums, and DTOs used by both frontend and backend:
+- Role and Permission enums with hierarchy logic
+- User, Task, Organization interfaces
+- Request/Response DTOs for API endpoints
 
-## Set up CI!
+**libs/auth** - Contains reusable authentication and authorization components:
+- `@Roles()` decorator for role-based route protection
+- `@RequirePermissions()` decorator for permission-based access
+- `@CurrentUser()` decorator to inject authenticated user
+- `RolesGuard` and `PermissionsGuard` for request authorization
 
-### Step 1
+## Data Model
 
-To connect to Nx Cloud, run the following command:
+### Entity Relationship Diagram
 
-```sh
-npx nx connect
+```
+┌─────────────────┐
+│  Organization   │
+├─────────────────┤
+│ id (PK)         │
+│ name            │
+│ parentId (FK)   │◄──┐ Self-referential
+│ createdAt       │   │ (2-level hierarchy)
+│ updatedAt       │───┘
+└────────┬────────┘
+         │ 1:N
+         ▼
+┌─────────────────┐         ┌─────────────────┐
+│      User       │         │    AuditLog     │
+├─────────────────┤         ├─────────────────┤
+│ id (PK)         │         │ id (PK)         │
+│ email           │         │ userId          │
+│ firstName       │         │ userEmail       │
+│ lastName        │         │ action          │
+│ password        │         │ resource        │
+│ role            │         │ resourceId      │
+│ organizationId  │         │ details         │
+│ createdAt       │         │ ipAddress       │
+│ updatedAt       │         │ timestamp       │
+└────────┬────────┘         └─────────────────┘
+         │ 1:N
+         ▼
+┌─────────────────┐
+│      Task       │
+├─────────────────┤
+│ id (PK)         │
+│ title           │
+│ description     │
+│ status          │
+│ priority        │
+│ category        │
+│ dueDate         │
+│ order           │
+│ createdById     │
+│ assigneeId      │
+│ organizationId  │
+│ createdAt       │
+│ updatedAt       │
+└─────────────────┘
 ```
 
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
+### Schema Details
 
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+- **Organization**: Supports 2-level hierarchy (parent-child). Used for scoping task visibility.
+- **User**: Belongs to one organization. Roles: `owner`, `admin`, `viewer`. Passwords hashed with bcrypt.
+- **Task**: Status (`todo`, `in_progress`, `done`), Priority (`low`, `medium`, `high`), Category (`work`, `personal`, `urgent`, `other`).
+- **AuditLog**: Records all CRUD operations with user info, action type, and timestamp.
 
-### Step 2
+## Access Control Implementation
 
-Use the following command to configure a CI workflow for your workspace:
+### Role Hierarchy
 
-```sh
-npx nx g ci-workflow
+```
+Owner (Level 3)
+  └── Admin (Level 2)
+       └── Viewer (Level 1)
 ```
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Higher roles inherit permissions from lower roles.
 
-## Install Nx Console
+### Permission Matrix
 
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
+| Permission | Owner | Admin | Viewer |
+|------------|-------|-------|--------|
+| task:create | ✓ | ✓ | ✗ |
+| task:read | ✓ | ✓ | ✓ |
+| task:update | ✓ | ✓ | ✗ |
+| task:delete | ✓ | ✓ | ✗ |
+| user:read | ✓ | ✓ | ✓ |
+| audit:read | ✓ | ✓ | ✗ |
 
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+### Organization Hierarchy & Task Visibility
 
-## Useful links
+The system implements downward-only visibility:
 
-Learn more:
+- Parent org users can see tasks in their org + all child orgs
+- Child org users can only see tasks in their own org
+- Users can always see tasks assigned to them (cross-org assignment)
 
-- [Learn more about this workspace setup](https://nx.dev/getting-started/intro#learn-nx?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+**Example:**
+```
+Acme Corporation (Parent)
+├── Technology Department (Child)
+└── Sales Department (Child)
+```
 
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+Sarah (Owner, Acme Corp) sees all tasks. James (Admin, Tech Dept) sees only Tech Dept tasks + tasks assigned to him.
+
+### JWT Integration
+
+1. User logs in via `POST /api/auth/login`
+2. Server validates credentials and returns JWT token
+3. Token contains: `sub` (userId), `email`, `role`, `organizationId`
+4. All protected routes require `Authorization: Bearer <token>`
+5. `JwtAuthGuard` validates token, `RolesGuard`/`PermissionsGuard` check access
+
+## API Documentation
+
+### Authentication
+
+#### POST /api/auth/login
+
+```json
+// Request
+{
+  "email": "sarah.mitchell@acme.com",
+  "password": "password123"
+}
+
+// Response
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": "uuid",
+    "email": "sarah.mitchell@acme.com",
+    "firstName": "Sarah",
+    "lastName": "Mitchell",
+    "role": "owner",
+    "organizationId": "uuid"
+  }
+}
+```
+
+### Tasks
+
+#### GET /api/tasks
+List accessible tasks (scoped by role/org).
+
+Query params: `status`, `priority`, `category`, `search`, `sortBy`, `sortOrder`
+
+```json
+// Response
+[
+  {
+    "id": "uuid",
+    "title": "Task Title",
+    "description": "Description",
+    "status": "todo",
+    "priority": "high",
+    "category": "work",
+    "dueDate": "2024-12-31T00:00:00.000Z",
+    "createdBy": { "firstName": "Sarah", "lastName": "Mitchell" },
+    "assignee": null
+  }
+]
+```
+
+#### POST /api/tasks
+Create a new task. Requires `task:create` permission.
+
+```json
+// Request
+{
+  "title": "New Task",
+  "description": "Task description",
+  "status": "todo",
+  "priority": "medium",
+  "category": "work"
+}
+```
+
+#### PUT /api/tasks/:id
+Update a task. Requires `task:update` permission.
+
+#### DELETE /api/tasks/:id
+Delete a task. Requires `task:delete` permission.
+
+### Audit Log
+
+#### GET /api/audit-log
+View access logs. Owner/Admin only.
+
+```json
+// Response
+[
+  {
+    "id": "uuid",
+    "userId": "uuid",
+    "userEmail": "sarah.mitchell@acme.com",
+    "action": "create",
+    "resource": "task",
+    "resourceId": "uuid",
+    "details": "Created task: Task Title",
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+]
+```
+
+## Future Considerations
+
+### Security Enhancements
+- **JWT Refresh Tokens**: Implement short-lived access tokens with refresh token rotation
+- **CSRF Protection**: Add CSRF tokens for state-changing operations
+- **Rate Limiting**: Add request rate limiting to prevent brute force attacks
+
+### Performance
+- **RBAC Caching**: Cache user permissions in Redis with invalidation on role changes
+- **Database Indexing**: Add indexes on frequently queried columns
+- **Pagination**: Implement cursor-based pagination for large task lists
+
+### Features
+- **Advanced Role Delegation**: Allow owners to create custom roles with fine-grained permissions
+- **Task Collaboration**: Comments, attachments, real-time updates via WebSockets
+- **Reporting**: Task completion trends, export to PDF/CSV
