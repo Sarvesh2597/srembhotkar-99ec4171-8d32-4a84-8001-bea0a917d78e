@@ -172,9 +172,10 @@ export class TaskCardComponent {
 
   getDueDateClass(): string {
     if (!this.task.dueDate) return 'text-slate-400';
-    const dueDate = new Date(this.task.dueDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const dueDateParts = this.task.dueDate.split('T')[0].split('-');
+    const dueDate = new Date(Date.UTC(+dueDateParts[0], +dueDateParts[1] - 1, +dueDateParts[2]));
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
 
     if (dueDate < today) {
       return 'text-red-500';
@@ -186,6 +187,6 @@ export class TaskCardComponent {
 
   formatDate(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
   }
 }
