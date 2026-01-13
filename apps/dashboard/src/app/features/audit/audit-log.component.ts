@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuditService, AuditLog } from '../../core/services/audit.service';
+import { AuditService } from '../../core/services/audit.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 
@@ -94,7 +94,7 @@ import { ThemeService } from '../../core/services/theme.service';
         <!-- Filters -->
         <div class="flex flex-wrap gap-4 items-center mb-6">
           <div class="relative">
-            <select [(ngModel)]="filterAction" class="input w-auto pr-10 appearance-none">
+            <select [value]="filterAction()" (change)="onActionChange($event)" class="input w-auto pr-10 appearance-none">
               <option value="">All Actions</option>
               <option value="create">Create</option>
               <option value="read">Read</option>
@@ -108,7 +108,7 @@ import { ThemeService } from '../../core/services/theme.service';
           </div>
 
           <div class="relative">
-            <select [(ngModel)]="filterResource" class="input w-auto pr-10 appearance-none">
+            <select [value]="filterResource()" (change)="onResourceChange($event)" class="input w-auto pr-10 appearance-none">
               <option value="">All Resources</option>
               <option value="task">Tasks</option>
               <option value="auth">Auth</option>
@@ -186,16 +186,18 @@ export class AuditLogComponent implements OnInit {
   themeService = inject(ThemeService);
   private router = inject(Router);
 
-  filterAction = '';
-  filterResource = '';
+  filterAction = signal('');
+  filterResource = signal('');
 
   filteredLogs = computed(() => {
     let logs = this.auditService.logs();
-    if (this.filterAction) {
-      logs = logs.filter(l => l.action.toLowerCase() === this.filterAction.toLowerCase());
+    const action = this.filterAction();
+    const resource = this.filterResource();
+    if (action) {
+      logs = logs.filter(l => l.action.toLowerCase() === action.toLowerCase());
     }
-    if (this.filterResource) {
-      logs = logs.filter(l => l.resource.toLowerCase() === this.filterResource.toLowerCase());
+    if (resource) {
+      logs = logs.filter(l => l.resource.toLowerCase() === resource.toLowerCase());
     }
     return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   });
@@ -206,6 +208,14 @@ export class AuditLogComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/dashboard']);
+  }
+
+  onActionChange(event: Event): void {
+    this.filterAction.set((event.target as HTMLSelectElement).value);
+  }
+
+  onResourceChange(event: Event): void {
+    this.filterResource.set((event.target as HTMLSelectElement).value);
   }
 
   countByAction(action: string): number {
